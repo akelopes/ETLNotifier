@@ -1,6 +1,6 @@
 failures:
   description: Checks for failed pipelines in Prod, UAT and Beta
-  message_single: "Pipeline %s - %s failed due to %s "
+  message_single: "Pipeline {} - {} failed due to {}."
   message_multiple: "Multiple pipelines failed:"
   sql: |
     WITH PipelineRunsCte AS (
@@ -28,7 +28,7 @@ failures:
 
 over_10h:
   description: Checks for pipeilnes running longer than 10 hours in Prod, UAT and Beta
-  message_single: "Pipeline %s - %s is running for over 10 hours"
+  message_single: "Pipeline {} - {} is running for over 10 hours"
   message_multiple: "Multiple pipelines are running over 10 hours:"
   sql: |
     WITH PipelineRunsCte AS (
@@ -60,7 +60,7 @@ over_10h:
 
 not_started:
   description: checks for pipelines that haven't started in over 24 hours for active accounts.
-  message_single: "Pipeline %s - %s has not started in over 24 hours."
+  message_single: "Pipeline {} - {} has not started in over 24 hours."
   message_multiple: "Multiple pipelines have not started in over 24 hours:"
   sql: |
     WITH PipelineRunsCte AS (
