@@ -9,9 +9,9 @@ import time
 
 
 WEBHOOK_URL = (
-    "https://prod-10.westus.logic.azure.com:443/workflows/9bda2d52dc9d4ca9a90928abe366671c/"
-    "triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&"
-    "sig=fVMn04eQKr_D0Gcg0nOL7f8rYnRgkjWIMjjgXs0j_NU"
+    "https://prod-68.westus.logic.azure.com:443/workflows/7c0fe23b4b714d889c9b60e13555ab2a/triggers/"
+    "manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&"
+    "sig=LS3VwR8Ng2G2nE-45nbjYvnvf2t2LXrgzcbqFdeybDc"
 )
 
 # Using ActiveDirectoryInteractive for MFA login, for Managed Identity use ActiveDirectoryMSI
@@ -25,6 +25,8 @@ CONN_STR = (
 
 CACHE_FILE = "cache.json"
 QUERIES_FILE = "queries.yml"
+
+MESSAGE_INTRO = "**[ETL Notifier]** [Automated Message] \n\n"
 
 
 def load_cache():
@@ -44,12 +46,12 @@ def send_to_teams(message: str):
         "type": "message",
         "attachments": [
             {
-                "contentType": "application/vnd.microsoft.card.adaptive",
+                "contentType": "application/vnd.microsoft.teams.card.o365connector",
                 "content": {
                     "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-                    "type": "AdaptiveCard",
+                    "@context": "http://schema.org/extensions",
                     "version": "1.2",
-                    "body": [{"type": "TextBlock", "text": message}],
+                    "content": message
                 },
             }
         ],
@@ -89,6 +91,8 @@ def main():
 
         if len(new_items) == 1:
             r = new_items[0]
+            msg = MESSAGE_INTRO
+
             if r.get("errorMessage") is not None:
                 msg = qinfo["message_single"].format(r["AccountName"], r["Environment"], r["errorMessage"])
             else:
@@ -99,7 +103,7 @@ def main():
             msg = qinfo["message_multiple"]
             lines = []
             for r in new_items:
-                lines.append(f" \r- **{r['AccountName']}**: **{r['Environment']}**")
+                lines.append(f" \n\n- **{r['AccountName']}**: **{r['Environment']}**")
             msg += "".join(lines)
 
             send_to_teams(msg)
