@@ -5,13 +5,13 @@ import os
 import requests
 import pyodbc
 import yaml
-from datetime import datetime
+import time
 
 
 WEBHOOK_URL = (
-    "https://prod-130.westus.logic.azure.com:443/workflows/7fa408686b1c4d519d6ae834788c9f5c/"
+    "https://prod-10.westus.logic.azure.com:443/workflows/9bda2d52dc9d4ca9a90928abe366671c/"
     "triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&"
-    "sig=qQUfJYcqWTt31khH-IXvqRvz99FQn9wIR86-AFfdN8o"
+    "sig=fVMn04eQKr_D0Gcg0nOL7f8rYnRgkjWIMjjgXs0j_NU"
 )
 
 # Using ActiveDirectoryInteractive for MFA login, for Managed Identity use ActiveDirectoryMSI
@@ -20,7 +20,7 @@ CONN_STR = (
     "Server=rebacentral-prod.database.windows.net;"
     "Database=rebacentral;"
     "Authentication=ActiveDirectoryInteractive;"
-    "UID=YourUser@domain.com;"
+    "UID=alopes@getreba.com;"  # EDIT FOR AUTHENTICATION
 )
 
 CACHE_FILE = "cache.json"
@@ -71,38 +71,37 @@ def main():
     cursor = conn.cursor()
 
     cache = load_cache()
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     for name, qinfo in queries_data.items():
         cursor.execute(qinfo["sql"])
         cols = [desc[0] for desc in cursor.description]
         rows = [dict(zip(cols, row)) for row in cursor.fetchall()]
 
-        new_items = []
-        for r in rows:
-            k = cache_unique_key(r)
-            if k not in cache.get(name, {}):
-                new_items.append(r)
-                cache.setdefault(name, {})[k] = True
+        current_keys = {cache_unique_key(r) for r in rows}
+        existing_cache = cache.get(name, {})
+        existing_keys = set(existing_cache.keys())
+        cache[name] = {k: True for k in current_keys}
+
+        new_items = [r for r in rows if cache_unique_key(r) in (current_keys - existing_keys)]
 
         if not new_items:
             continue
 
         if len(new_items) == 1:
             r = new_items[0]
-            if name == "new_failure":
-                msg = f"{r['AccountName']}-{r['Environment']} failed: {r.get('errorMessage','')} on {now_str}"
-            elif name == "over_10h":
-                msg = f"{r['AccountName']}-{r['Environment']} over 10h on {now_str}"
+            if r.get("errorMessage") is not None:
+                msg = qinfo["message_single"].format(r["AccountName"], r["Environment"], r["errorMessage"])
             else:
-                msg = f"{r['AccountName']}-{r['Environment']} condition on {now_str}"
+                msg = qinfo["message_single"].format(r["AccountName"], r["Environment"])
+
             send_to_teams(msg)
         else:
-            msg = f"{len(new_items)} pipelines matched '{name}' on {now_str}.\n"
+            msg = qinfo["message_multiple"]
             lines = []
             for r in new_items:
-                lines.append(f"{r['AccountName']} | {r['Environment']}")
-            msg += "\n".join(lines)
+                lines.append(f" \r- **{r['AccountName']}**: **{r['Environment']}**")
+            msg += "".join(lines)
+
             send_to_teams(msg)
 
     save_cache(cache)
@@ -111,4 +110,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    while True:
+        main()
+        time.sleep(300)  # 5 Minutes
