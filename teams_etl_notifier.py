@@ -26,7 +26,7 @@ CONN_STR = (
 CACHE_FILE = "cache.json"
 QUERIES_FILE = "queries.yml"
 
-MESSAGE_INTRO = "**[ETL Notifier]** [Automated Message] \n\n"
+MESSAGE_INTRO = "\r **[ETL Notifier]** [Automated Message] \n\n"
 
 
 def load_cache():
@@ -89,18 +89,19 @@ def main():
         if not new_items:
             continue
 
+        msg = MESSAGE_INTRO
         if len(new_items) == 1:
             r = new_items[0]
-            msg = MESSAGE_INTRO
+            
 
             if r.get("errorMessage") is not None:
-                msg = qinfo["message_single"].format(r["AccountName"], r["Environment"], r["errorMessage"])
+                msg += qinfo["message_single"].format(r["AccountName"], r["Environment"], r["errorMessage"])
             else:
-                msg = qinfo["message_single"].format(r["AccountName"], r["Environment"])
+                msg += qinfo["message_single"].format(r["AccountName"], r["Environment"])
 
             send_to_teams(msg)
         else:
-            msg = qinfo["message_multiple"]
+            msg += qinfo["message_multiple"]
             lines = []
             for r in new_items:
                 lines.append(f" \n\n- **{r['AccountName']}**: **{r['Environment']}**")
