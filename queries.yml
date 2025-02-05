@@ -18,7 +18,7 @@ failures:
       e.EnvironmentType AS Environment,
       p.StartTime,
       p.EndTime,
-      LEFT(p.errorMessage, 450) + '...' AS errorMessage
+      LEFT(p.errorMessage, 1000) AS errorMessage
     FROM PipelineRunsCte p
     JOIN dbo.Environments e ON e.EnvironmentId = p.EnvironmentId
     JOIN Accounts a ON a.AccountId = e.AccountId
