@@ -51,7 +51,7 @@ def send_to_teams(message: str):
                     "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
                     "@context": "http://schema.org/extensions",
                     "version": "1.2",
-                    "content": message
+                    "content": message,
                 },
             }
         ],
@@ -81,10 +81,35 @@ def main():
 
         current_keys = {cache_unique_key(r) for r in rows}
         existing_cache = cache.get(name, {})
-        existing_keys = set(existing_cache.keys())
-        cache[name] = {k: True for k in current_keys}
 
-        new_items = [r for r in rows if cache_unique_key(r) in (current_keys - existing_keys)]
+        if name == "failures":
+            cache[name] = {k: "confirmed" for k in current_keys} 
+            new_items = [
+                r
+                for r in rows
+                if cache_unique_key(r) in (current_keys - existing_cache.keys())
+            ]
+
+        else:
+            # Staggering mechanism to avoid delays in Reba Central updates
+            new_pending_items = {
+                k: "pending" for k in (current_keys - existing_cache.keys())
+            }
+            confirmed_items = [
+                r for r in rows if existing_cache.get(cache_unique_key(r)) == "pending"
+            ]
+
+            cache[name] = {
+                **{
+                    k: "confirmed"
+                    for k in current_keys
+                    # updates pending and maintain confirmed if it is still returning from the query.
+                    if existing_cache.get(k) == "pending" or existing_cache.get(k) == "confirmed" 
+                },
+                **new_pending_items,
+            }
+
+            new_items = confirmed_items
 
         if not new_items:
             continue
@@ -92,7 +117,6 @@ def main():
         msg = MESSAGE_INTRO
         if len(new_items) == 1:
             r = new_items[0]
-            
 
             if r.get("errorMessage") is not None:
                 msg += qinfo["message_single"].format(r["AccountName"], r["Environment"], r["errorMessage"])
