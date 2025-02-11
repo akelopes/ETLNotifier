@@ -127,7 +127,7 @@ class NewNotificationStrategy(NotificationStrategy):
         pass
 ```
 
-2. Add the new strategy type to `ETLNotifier.NOTIFICATION_TYPES`
+2. Add the new strategy type to `ETLNotifier.SOURCE_TYPES`
 
 ### Running Tests
 
