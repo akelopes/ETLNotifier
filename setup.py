@@ -17,7 +17,6 @@ setup(
         "dev": [
             "pytest",
             "pytest-cov",
-            "pytest-asyncio",
             "black",
             "isort",
             "mypy",
