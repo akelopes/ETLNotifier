@@ -176,25 +176,6 @@ The project follows SOLID principles and uses several design patterns:
 4. Ensure all tests pass
 5. Submit a pull request
 
-## Troubleshooting
-
-Common issues and solutions:
-
-1. Database Connection Issues:
-   - Verify ODBC Driver is installed
-   - Check connection string format
-   - Ensure proper authentication
-
-2. Notification Failures:
-   - Verify webhook URL is correct
-   - Check network connectivity
-   - Validate message format
-
-3. Cache Issues:
-   - Check file permissions for JSON cache
-   - Verify cache directory exists
-   - Monitor cache file size
-
 ## Additional Resources
 
 - [ODBC Driver Documentation](https://docs.microsoft.com/en-us/sql/connect/odbc/microsoft-odbc-driver-for-sql-server)
