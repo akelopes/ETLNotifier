@@ -5,13 +5,13 @@ import time
 from typing import Dict, Type
 from dotenv import load_dotenv
 
-from .models.notification_record import NotificationRecord
-from .services.data_source.base import DataSource
-from .services.data_source.database import DatabaseSource
-from .services.notification.teams_strategy import TeamsNotificationStrategy
-from .services.notification.formatter import NotificationFormatter
-from .services.config_loader import ConfigLoader
-from .services.cache import CacheStrategy, JsonFileCache
+from etl_notifier.models.notification_record import NotificationRecord
+from etl_notifier.services.data_source.base import DataSource
+from etl_notifier.services.data_source.database import DatabaseSource
+from etl_notifier.services.notification.teams_strategy import TeamsNotificationStrategy
+from etl_notifier.services.notification.formatter import NotificationFormatter
+from etl_notifier.services.config_loader import ConfigLoader
+from etl_notifier.services.cache import CacheStrategy, JsonFileCache
 
 
 class ETLNotifier:
@@ -152,7 +152,7 @@ def main():
             print(f"Error in main loop: {str(e)}")
         finally:
             # Wait before next iteration (5 minutes by default)
-            sleep_time = int(os.getenv("ETL_SLEEP_TIME", "300"))
+            sleep_time = int(os.getenv("ETL_SLEEP_TIME", 300))
             time.sleep(sleep_time)
 
 if __name__ == "__main__":
