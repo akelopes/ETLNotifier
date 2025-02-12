@@ -12,21 +12,21 @@ from etl_notifier.services.data_source.database import DatabaseSource
 
 @pytest.fixture
 def sample_etl_records():
-    """Create sample ETL records for testing"""
-    return [
-        NotificationRecord(
-            account_name="TestAccount1",
-            environment="Prod",
-            start_time=datetime(2025, 1, 1),
-            error_message="Test error 1"
-        ),
-        NotificationRecord(
-            account_name="TestAccount2",
-            environment="Dev",
-            start_time=datetime(2025, 1, 1),
-            error_message="Test error 2"
-        )
-    ]
+   """Create sample ETL records for testing"""
+   return [
+       NotificationRecord(
+           account_name="TestAccount1", 
+           environment="Prod",
+           start_time="2025-01-01T00:00:00",
+           error_message="Test error 1"
+       ),
+       NotificationRecord(
+           account_name="TestAccount2",
+           environment="Dev", 
+           start_time="2025-01-01T00:00:00",
+           error_message="Test error 2"
+       )
+   ]
 
 @pytest.fixture
 def mock_cache_file(tmp_path):
