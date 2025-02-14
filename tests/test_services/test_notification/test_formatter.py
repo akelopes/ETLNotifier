@@ -5,7 +5,7 @@ from etl_notifier.services.notification.formatter import NotificationFormatter
 
 class TestNotificationFormatter:
     def test_format_single_notification_with_error(self, sample_etl_records):
-        template = "Error in {} - {}: {}"
+        template = "Error in {account} - {env}: {errorMessage}"
         message = NotificationFormatter.format_single_notification(
             sample_etl_records[0], template
         )
@@ -21,7 +21,7 @@ class TestNotificationFormatter:
             environment="Production",
             start_time=datetime(2025, 1, 1)
         )
-        template = "Status for {} in {}"
+        template = "Status for {account} in {env}"
         message = NotificationFormatter.format_single_notification(record, template)
 
         assert NotificationFormatter.MESSAGE_INTRO in message
@@ -64,10 +64,10 @@ class TestNotificationFormatter:
         assert message.count("\n\n-") == 0
 
     @pytest.mark.parametrize("template", [
-        "Error in {} - {}: {}",
-        "{} has error in {}: {}",
-        "Issue: {} {} {}",
-        "** {} ** encountered in {} : {}"
+        "Error in {account} - {env}: {errorMessage}",
+        "{account} has error in {env}: {errorMessage}",
+        "Issue: {account} {env} {errorMessage}",
+        "** {account} ** encountered in {env} : {errorMessage}"
     ])
     def test_format_single_notification_different_templates(self, sample_etl_records, template):
         message = NotificationFormatter.format_single_notification(
@@ -80,7 +80,7 @@ class TestNotificationFormatter:
         assert "Test error 1" in message
 
     def test_format_preserves_markdown(self, sample_etl_records):
-        template = "**Error** in **{}** - *{}*: {}"
+        template = "**Error** in **{account}** - *{env}*: {errorMessage}"
         message = NotificationFormatter.format_single_notification(
             sample_etl_records[0], template
         )

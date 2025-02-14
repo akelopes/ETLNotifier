@@ -35,7 +35,7 @@ class TestETLNotifier:
             )
 
             cache = {"test_query": {sample_etl_records[0].get_unique_key(): "pending"}}
-            mock_etl_config["queries"]["test_query"]["message_single"] = "Test message for {0} in {1}: {2}"
+            mock_etl_config["queries"]["test_query"]["message_single"] = "Test message for {account} in {env}: {errorMessage}"
             
             notifier.process_query_results(
                 "test_query",

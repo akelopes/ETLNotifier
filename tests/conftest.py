@@ -18,12 +18,14 @@ def sample_etl_records():
            account_name="TestAccount1", 
            environment="Prod",
            start_time="2025-01-01T00:00:00",
+           url="https://",
            error_message="Test error 1"
        ),
        NotificationRecord(
            account_name="TestAccount2",
            environment="Dev", 
            start_time="2025-01-01T00:00:00",
+           url="https://",
            error_message="Test error 2"
        )
    ]
