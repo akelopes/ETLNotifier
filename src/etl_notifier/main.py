@@ -115,6 +115,7 @@ class ETLNotifier:
                                     account_name=record["AccountName"],
                                     environment=record["Environment"],
                                     start_time=record["StartTime"],
+                                    url=record.get("PipelineURL"),
                                     error_message=record.get("errorMessage")
                                 )
                                 for record in raw_records

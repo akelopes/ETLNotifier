@@ -10,12 +10,14 @@ class TestNotificationRecord:
             account_name="TestAccount",
             environment="Production",
             start_time=datetime(2025, 1, 1),
+            url="https://",
             error_message="Test error message"
         )
         
         assert record.account_name == "TestAccount"
         assert record.environment == "Production"
         assert record.start_time == datetime(2025, 1, 1)
+        assert record.url == "https://"
         assert record.error_message == "Test error message"
 
     def test_create_notification_record_without_error(self):
@@ -81,12 +83,14 @@ class TestNotificationRecord:
             account_name="TestAccount",
             environment="Production",
             start_time=time,
+            url="https://",
             error_message="Error"
         )
         record2 = NotificationRecord(
             account_name="TestAccount",
             environment="Production",
             start_time=time,
+            url="https://",
             error_message="Error"
         )
         
@@ -99,12 +103,14 @@ class TestNotificationRecord:
             account_name="TestAccount1",
             environment="Production",
             start_time=time,
+            url="https://",
             error_message="Error"
         )
         record2 = NotificationRecord(
             account_name="TestAccount2",
             environment="Production",
             start_time=time,
+            url="https://",
             error_message="Error"
         )
         

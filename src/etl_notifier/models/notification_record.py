@@ -7,6 +7,7 @@ class NotificationRecord:
     account_name: str
     environment: str
     start_time: datetime
+    url: Optional[str] = None
     error_message: Optional[str] = None
 
     def get_unique_key(self) -> str:

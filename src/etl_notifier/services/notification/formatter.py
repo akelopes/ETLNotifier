@@ -17,7 +17,11 @@ class NotificationFormatter:
             Formatted message string
         """
         message = cls.MESSAGE_INTRO
-        if record.error_message:
+        if record.error_message and record.url:
+            return message + template.format(
+                record.account_name, record.environment, record.url, record.error_message
+            )
+        elif record.error_message:
             return message + template.format(
                 record.account_name, record.environment, record.error_message
             )
@@ -40,7 +44,12 @@ class NotificationFormatter:
         message = cls.MESSAGE_INTRO + template
         lines = []
         for record in records:
-            lines.append(
-                f" \n\n- **{record.account_name}**: **{record.environment}**"
-            )
+            if record.url:
+                lines.append(
+                    f" \n\n- [**{record.account_name}**: **{record.environment}**]({record.url})"
+                )
+            else: 
+                lines.append(
+                    f" \n\n- **{record.account_name}**: **{record.environment}**"
+                )
         return message + "".join(lines)
