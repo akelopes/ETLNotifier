@@ -1,5 +1,5 @@
 from typing import List
-from etl_notifier.models.notification_record import NotificationRecord
+from ...models.notification_record import NotificationRecord
 
 class NotificationFormatter:
     MESSAGE_INTRO = "\r **[ETL Notifier]** [Automated Message] \n\n"
@@ -16,14 +16,11 @@ class NotificationFormatter:
         Returns:
             Formatted message string
         """
-        if '{' not in template:
-            return cls.MESSAGE_INTRO + template
-        
         message = cls.MESSAGE_INTRO
         format_args = {
             'account': record.account_name,
             'env': record.environment,
-            'url': record.url ,
+            'url': record.url or '',
             'errorMessage': record.error_message or ''
         }
 

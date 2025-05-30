@@ -6,29 +6,23 @@ import json
 import pyodbc
 from unittest.mock import Mock, MagicMock
 
+# Add the src directory to the Python path
+src_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.insert(0, src_path)
+
 from etl_notifier.models.notification_record import NotificationRecord
 from etl_notifier.services.notification.strategy import NotificationStrategy
 from etl_notifier.services.data_source.database import DatabaseSource
 
 @pytest.fixture
-def sample_etl_records():
-   """Create sample ETL records for testing"""
-   return [
-       NotificationRecord(
-           account_name="TestAccount1", 
-           environment="Prod",
-           start_time="2025-01-01T00:00:00",
-           url="https://",
-           error_message="Test error 1"
-       ),
-       NotificationRecord(
-           account_name="TestAccount2",
-           environment="Dev", 
-           start_time="2025-01-01T00:00:00",
-           url="https://",
-           error_message="Test error 2"
-       )
-   ]
+def sample_notification_record():
+    """Create a sample notification record for testing"""
+    return NotificationRecord(
+        account_name="TestAccount",
+        environment="Production",
+        start_time=datetime(2025, 1, 1),
+        error_message="Test error message"
+    )
 
 @pytest.fixture
 def mock_cache_file(tmp_path):
@@ -65,7 +59,14 @@ queries:
 @pytest.fixture
 def mock_notification_strategy():
     """Create a mock notification strategy"""
-    return Mock(spec=NotificationStrategy)
+    class MockNotificationStrategy(NotificationStrategy):
+        def __init__(self):
+            self.sent_messages = []
+
+        def send_notification(self, message: str) -> None:
+            self.sent_messages.append(message)
+
+    return MockNotificationStrategy()
 
 @pytest.fixture
 def mock_db_cursor():
@@ -127,36 +128,3 @@ def env_vars():
     yield
     os.environ.clear()
     os.environ.update(original_environ)
-
-@pytest.fixture
-def mock_etl_config():
-    """Create a sample ETL configuration"""
-    return {
-        "sources": {
-            "source1": {
-                "type": "database",
-                "connection_string": "test_connection"
-            }
-        },
-        "queries": {
-            "test_query": {
-                "source": "source1",
-                "query": {"sql": "SELECT * FROM test"},
-                "message_single": "Test message: {account_name}",
-                "message_multiple": "Multiple tests: {count}"
-            },
-            "failures": {
-                "source": "source1",
-                "query": {"sql": "SELECT * FROM failures"},
-                "message_single": "Failure: {account_name}",
-                "message_multiple": "Multiple failures: {count}"
-            }
-        }
-    }
-
-@pytest.fixture
-def mock_cache_strategy():
-    """Create a mock cache strategy"""
-    cache = Mock()
-    cache.load.return_value = {}
-    return cache
