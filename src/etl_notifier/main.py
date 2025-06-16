@@ -95,7 +95,6 @@ class ETLNotifier:
             sources_config = self.config["sources"]
             queries_config = self.config["queries"]
 
-            # Group queries by source
             source_queries = {}
             for query_name, query_info in queries_config.items():
                 source_name = query_info["source"]
@@ -103,7 +102,6 @@ class ETLNotifier:
                     source_queries[source_name] = []
                 source_queries[source_name].append((query_name, query_info))
 
-            # Process each source and its queries
             for source_name, queries in source_queries.items():
                 source_config = sources_config[source_name]
                 with self._create_data_source(source_config) as source:
@@ -145,14 +143,12 @@ def main():
         ),
     )
 
-    # Run the notification process in a loop
     while True:
         try:
             notifier.run()
         except Exception as e:
             print(f"Error in main loop: {str(e)}")
         finally:
-            # Wait before next iteration (5 minutes by default)
             sleep_time = int(os.getenv("ETL_SLEEP_TIME", 300))
             time.sleep(sleep_time)
 
