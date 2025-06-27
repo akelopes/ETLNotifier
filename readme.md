@@ -17,7 +17,7 @@ etl_notifier/
 ├── src/
 │   └── etl_notifier/
 │       ├── models/              # Data models
-│       ├── services/
+│       ├── strategies/
 │       │   ├── cache/          # Cache implementations
 │       │   ├── data_source/    # Data source implementations
 │       │   └── notification/   # Notification strategies
@@ -103,7 +103,7 @@ queries:
 
 ### Adding a New Data Source
 
-1. Create a new class in `services/data_source/` implementing the `DataSource` interface:
+1. Create a new class in `strategies/data_source/` implementing the `DataSource` interface:
 ```python
 from .base import DataSource
 
@@ -113,11 +113,11 @@ class NewDataSource(DataSource):
         pass
 ```
 
-2. Add the new source type to `ETLNotifier.SOURCE_TYPES`
+2. Add the new source type to `Notifier.SOURCE_TYPES`
 
 ### Adding a New Notification Strategy
 
-1. Create a new class in `services/notification/` implementing the `NotificationStrategy` interface:
+1. Create a new class in `strategies/notification/` implementing the `NotificationStrategy` interface:
 ```python
 from .strategy import NotificationStrategy
 
@@ -127,7 +127,7 @@ class NewNotificationStrategy(NotificationStrategy):
         pass
 ```
 
-2. Add the new strategy type to `ETLNotifier.SOURCE_TYPES`
+2. Add the new strategy type to `Notifier.SOURCE_TYPES`
 
 ### Running Tests
 

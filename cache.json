@@ -1,12 +1,5 @@
 {
-  "failures": {
-    "EdwardRose|Dev|2025-05-30 08:00:01": "confirmed",
-    "FirstLake|Uat|2025-05-30 09:41:30": "confirmed",
-    "Brookfield|Dev|2025-05-30 11:45:00": "confirmed",
-    "Griffin|Prod|2025-05-30 13:55:30": "confirmed",
-    "Fairfield|Dev|2025-05-30 06:30:00": "confirmed",
-    "HGFenton|Uat|2025-05-30 13:15:00": "confirmed"
-  },
-  "over_10h": {},
-  "not_started": {}
+  "query": {
+    "k": "confirmed"
+  }
 }
