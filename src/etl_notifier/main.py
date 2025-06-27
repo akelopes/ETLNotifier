@@ -3,7 +3,6 @@
 import os
 import time
 from typing import Dict, Type
-from dotenv import load_dotenv
 
 from etl_notifier.models.notification_record import NotificationRecord
 from etl_notifier.services.data_source.base import DataSource
@@ -21,14 +20,13 @@ class ETLNotifier:
 
     def __init__(
         self,
-        queries_file: str,
+        config: Dict,
         cache_strategy: CacheStrategy,
         notification_strategy: TeamsNotificationStrategy,
     ):
-        self.queries_file = queries_file
         self.cache_manager = cache_strategy
         self.notification_strategy = notification_strategy
-        self.config = ConfigLoader.load_queries(queries_file)
+        self.config = config
         
     def _create_data_source(self, source_config: Dict) -> DataSource:
         """Create a data source instance based on configuration."""
@@ -131,15 +129,13 @@ class ETLNotifier:
 def main():
     """Main entry point for the ETL notifier."""
     # Load environment variables
-    load_dotenv()
+    config = ConfigLoader.load_queries("config/queries.yml")
 
     notifier = ETLNotifier(
-        queries_file=os.getenv("ETL_QUERIES_FILE", "config/queries.yml"),
-        cache_strategy=JsonFileCache(
-            os.getenv("ETL_CACHE_FILE", "cache.json")
-        ),
+        config=config,
+        cache_strategy=JsonFileCache("cache.json"),
         notification_strategy=TeamsNotificationStrategy(
-            webhook_url=os.getenv("ETL_TEAMS_WEBHOOK_URL")
+            webhook_url=config["notification"]["webhook_url"]
         ),
     )
 
