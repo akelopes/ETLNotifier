@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
+import sys 
+print(sys.path)
+
 
 import os
 import time
 from typing import Dict, Type
 
 from etl_notifier.models.notification_record import NotificationRecord
-from etl_notifier.services.data_source.base import DataSource
-from etl_notifier.services.data_source.database import DatabaseSource
-from etl_notifier.services.notification.teams_strategy import TeamsNotificationStrategy
-from etl_notifier.services.notification.formatter import NotificationFormatter
+from etl_notifier.services.data_source import DataSource, AzureSqlDBSource, DatabaseSource
+from etl_notifier.services.notification import TeamsNotificationStrategy
+from etl_notifier.services.notification import NotificationFormatter
 from etl_notifier.services.config_loader import ConfigLoader
 from etl_notifier.services.cache import CacheStrategy, JsonFileCache
 
@@ -16,6 +18,7 @@ from etl_notifier.services.cache import CacheStrategy, JsonFileCache
 class ETLNotifier:
     SOURCE_TYPES: Dict[str, Type[DataSource]] = {
         "database": DatabaseSource,
+        "azure_sql_db": AzureSqlDBSource
     }
 
     def __init__(
