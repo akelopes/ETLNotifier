@@ -2,13 +2,13 @@
 import logging
 import os
 import time
-from typing import Dict, Type
+from typing import Dict, List, Type
 
 from etl_notifier.models.notification_record import NotificationRecord
 from etl_notifier.services.cache import CacheStrategy, JsonFileCache
 from etl_notifier.services.config_loader import ConfigLoader
 from etl_notifier.services.data_source import AzureSqlDBSource, DatabaseSource, DataSource
-from etl_notifier.services.notification import NotificationFormatter, TeamsNotificationStrategy
+from etl_notifier.services.notification import NotificationFormatter, NotificationStrategy, TeamsNotificationStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -18,16 +18,24 @@ class ETLNotifier:
         "database": DatabaseSource,
         "azure_sql_db": AzureSqlDBSource,
     }
+    NOTIFICATION_TYPES: Dict[str, Type[NotificationStrategy]] = {
+        "teams": TeamsNotificationStrategy,
+    }
 
-    def __init__(
-        self,
-        config: Dict,
-        cache_strategy: CacheStrategy,
-        notification_strategy: TeamsNotificationStrategy,
-    ):
+    def __init__(self, config: Dict, cache_strategy: CacheStrategy):
         self.cache_manager = cache_strategy
-        self.notification_strategy = notification_strategy
         self.config = config
+        self.notification_strategies: Dict[str, NotificationStrategy] = {
+            name: self._create_notification_strategy(cfg)
+            for name, cfg in config["notifications"].items()
+        }
+
+    def _create_notification_strategy(self, sink_config: Dict) -> NotificationStrategy:
+        sink_type = sink_config["type"]
+        cls = self.NOTIFICATION_TYPES.get(sink_type)
+        if not cls:
+            raise ValueError(f"Unknown notification type: {sink_type}")
+        return cls(**{k: v for k, v in sink_config.items() if k != "type"})
 
     def _create_data_source(self, source_config: Dict) -> DataSource:
         source_type = source_config["type"]
@@ -35,6 +43,13 @@ class ETLNotifier:
         if not source_class:
             raise ValueError(f"Unknown source type: {source_type}")
         return source_class(**{k: v for k, v in source_config.items() if k != "type"})
+
+    def _get_sinks(self, query_info: Dict) -> List[NotificationStrategy]:
+        return [
+            self.notification_strategies[name]
+            for name in query_info.get("notifications", [])
+            if name in self.notification_strategies
+        ]
 
     def process_query_results(self, query_name: str, records: list, cache: dict, query_info: dict) -> None:
         current_keys = {record.get_unique_key() for record in records}
@@ -60,7 +75,8 @@ class ETLNotifier:
         else:
             message = NotificationFormatter.format_multiple_notifications(new_items, query_info["message_multiple"])
 
-        self.notification_strategy.send_notification(message)
+        for sink in self._get_sinks(query_info):
+            sink.send_notification(message)
 
     def run(self) -> None:
         try:
@@ -70,8 +86,7 @@ class ETLNotifier:
 
             source_queries: Dict[str, list] = {}
             for query_name, query_info in queries_config.items():
-                source_name = query_info["source"]
-                source_queries.setdefault(source_name, []).append((query_name, query_info))
+                source_queries.setdefault(query_info["source"], []).append((query_name, query_info))
 
             for source_name, queries in source_queries.items():
                 source_config = sources_config[source_name]
@@ -102,12 +117,7 @@ class ETLNotifier:
 def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     config = ConfigLoader.load_queries("config/queries.yml")
-
-    notifier = ETLNotifier(
-        config=config,
-        cache_strategy=JsonFileCache("cache.json"),
-        notification_strategy=TeamsNotificationStrategy(webhook_url=config["notification"]["webhook_url"]),
-    )
+    notifier = ETLNotifier(config=config, cache_strategy=JsonFileCache("cache.json"))
 
     while True:
         try:

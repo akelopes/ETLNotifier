@@ -16,16 +16,13 @@ class ConfigLoader:
         if not isinstance(config, dict):
             raise ValueError("Configuration must be a dictionary")
 
-        if "notification" not in config:
-            raise ValueError("Configuration must contain 'notification' section")
-
-        notification = config["notification"]
-        if "type" not in notification:
-            raise ValueError("Notification section must specify a 'type'")
-        if "webhook_url" not in notification:
-            raise ValueError("Notification section must specify a 'webhook_url'")
-
         processed = ConfigLoader._process_section(config)
+
+        if "notifications" not in processed:
+            raise ValueError("Configuration must contain 'notifications' section")
+        for name, sink in processed["notifications"].items():
+            if "type" not in sink:
+                raise ValueError(f"Notification sink '{name}' must specify a 'type'")
 
         if "sources" not in processed:
             raise ValueError("Configuration must contain 'sources' section")
@@ -46,6 +43,11 @@ class ConfigLoader:
                 raise ValueError(f"Query '{name}' must specify 'message_single'")
             if "message_multiple" not in query:
                 raise ValueError(f"Query '{name}' must specify 'message_multiple'")
+            if "notifications" not in query:
+                raise ValueError(f"Query '{name}' must specify 'notifications'")
+            for sink_name in query["notifications"]:
+                if sink_name not in processed["notifications"]:
+                    raise ValueError(f"Query '{name}' references undefined notification sink '{sink_name}'")
 
         return processed
 
