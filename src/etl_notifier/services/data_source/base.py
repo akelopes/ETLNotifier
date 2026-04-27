@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import List, Any, Dict, Optional
+from typing import Any, Dict, List
+
 
 class DataSource(ABC):
     @abstractmethod
@@ -10,7 +11,7 @@ class DataSource(ABC):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
+        self.disconnect()
 
     def connect(self) -> None:
         pass
