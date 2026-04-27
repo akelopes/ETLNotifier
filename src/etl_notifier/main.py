@@ -10,7 +10,7 @@ from etl_notifier.models.notification_record import NotificationRecord
 from etl_notifier.services.cache import CacheStrategy, JsonFileCache
 from etl_notifier.services.config_loader import ConfigLoader
 from etl_notifier.services.data_source import AzureSqlDBSource, DatabaseSource, DataSource
-from etl_notifier.services.notification import NotificationFormatter, NotificationStrategy, TeamsNotificationStrategy
+from etl_notifier.services.notification import NotificationStrategy, TeamsNotificationStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -72,13 +72,8 @@ class ETLNotifier:
         if not new_items:
             return
 
-        if len(new_items) == 1:
-            message = NotificationFormatter.format_single_notification(new_items[0], query_info["message_single"])
-        else:
-            message = NotificationFormatter.format_multiple_notifications(new_items, query_info["message_multiple"])
-
         for sink in self._get_sinks(query_info):
-            sink.send_notification(message)
+            sink.send_notification(new_items, query_info["message_single"], query_info["message_multiple"])
 
     def run(self) -> None:
         try:

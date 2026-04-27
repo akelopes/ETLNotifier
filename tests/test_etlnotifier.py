@@ -99,13 +99,13 @@ class TestETLNotifier:
         notifier.process_query_results("test_query", [record], cache, query_info)
         mock_sink.send_notification.assert_not_called()
 
-    def test_multiple_confirmed_items_uses_multi_formatter(self, notifier, mock_sink, sample_etl_records):
+    def test_multiple_confirmed_items_passes_multiple_template(self, notifier, mock_sink, sample_etl_records):
         cache = {"test_query": {r.get_unique_key(): "pending" for r in sample_etl_records}}
         query_info = mock_etl_config_query(notifications=["teams_main"])
         notifier.process_query_results("test_query", sample_etl_records, cache, query_info)
         mock_sink.send_notification.assert_called_once()
-        message = mock_sink.send_notification.call_args[0][0]
-        assert "Multiple issues:" in message
+        _, template_single, template_multiple = mock_sink.send_notification.call_args[0]
+        assert template_multiple == "Multiple issues:"
 
     # --- multi-sink routing ---
 

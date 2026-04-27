@@ -4,7 +4,7 @@ from datetime import datetime
 from unittest.mock import MagicMock, Mock
 
 # Native/cloud deps unavailable in dev/CI without drivers or Azure SDK installed
-for _mod in ("pyodbc", "azure", "azure.identity"):
+for _mod in ("pyodbc", "azure", "azure.identity", "dotenv"):
     sys.modules.setdefault(_mod, MagicMock())
 import pyodbc  # noqa: E402 — must come after mock
 
