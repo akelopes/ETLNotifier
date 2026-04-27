@@ -4,6 +4,8 @@ import os
 import time
 from typing import Dict, List, Type
 
+from dotenv import load_dotenv
+
 from etl_notifier.models.notification_record import NotificationRecord
 from etl_notifier.services.cache import CacheStrategy, JsonFileCache
 from etl_notifier.services.config_loader import ConfigLoader
@@ -115,6 +117,7 @@ class ETLNotifier:
 
 
 def main():
+    load_dotenv()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     config = ConfigLoader.load_queries("config/queries.yml")
     notifier = ETLNotifier(config=config, cache_strategy=JsonFileCache("cache.json"))
