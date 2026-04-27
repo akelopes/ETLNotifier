@@ -10,7 +10,7 @@ from etl_notifier.models.notification_record import NotificationRecord
 from etl_notifier.services.cache import CacheStrategy, JsonFileCache
 from etl_notifier.services.config_loader import ConfigLoader
 from etl_notifier.services.data_source import AzureSqlDBSource, DatabaseSource, DataSource
-from etl_notifier.services.notification import NotificationStrategy, TeamsNotificationStrategy
+from etl_notifier.services.notification import MongoNotificationStrategy, NotificationStrategy, TeamsNotificationStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +22,7 @@ class ETLNotifier:
     }
     NOTIFICATION_TYPES: Dict[str, Type[NotificationStrategy]] = {
         "teams": TeamsNotificationStrategy,
+        "mongodb": MongoNotificationStrategy,
     }
 
     def __init__(self, config: Dict, cache_strategy: CacheStrategy):
@@ -99,6 +100,7 @@ class ETLNotifier:
                                     url=record.get("PipelineURL"),
                                     error_message=record.get("errorMessage"),
                                     over_hour=record.get("over_hour"),
+                                    run_id=record.get("PipelineRunId"),
                                 )
                                 for record in raw_records
                             ]

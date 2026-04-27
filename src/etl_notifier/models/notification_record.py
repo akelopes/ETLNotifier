@@ -10,6 +10,7 @@ class NotificationRecord:
     url: Optional[str] = None
     error_message: Optional[str] = None
     over_hour: Optional[str] = None
+    run_id: Optional[str] = None
 
     def get_unique_key(self) -> str:
         return f"{self.account_name}|{self.environment}|{self.start_time}"
