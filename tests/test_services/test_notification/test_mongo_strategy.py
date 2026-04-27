@@ -45,7 +45,7 @@ class TestMongoNotificationStrategy:
         assert doc["type"] == "ETLFailure"
         assert doc["source"] == "etlnotifier"
         assert doc["status"] == "completed"
-        assert doc["prompt"] == "Use etl-triage to analyze ADF failure abc-123-run-id"
+        assert doc["prompt"] == "Use /etl-triage to analyze ADF failure abc-123-run-id for TestAccount (Prod)"
         for field in ("id", "handoffId"):
             uuid.UUID(doc[field])  # raises if not a valid UUID
 
