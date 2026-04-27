@@ -1,18 +1,15 @@
 import pytest
-import os
-from unittest.mock import patch
 import yaml
+from unittest.mock import patch
 
 from etl_notifier.services.config_loader import ConfigLoader
 
-class TestConfigLoader:
-    @pytest.fixture
-    def valid_config_file(self, tmp_path):
-        """Create a valid configuration file for testing"""
-        config_content = """
-notification:
-    type: teams
-    webhook_url: ${ETL_TEAMS_WEBHOOK_URL}
+
+VALID_CONFIG = """
+notifications:
+    teams_main:
+        type: teams
+        webhook_url: ${ETL_TEAMS_WEBHOOK_URL}
 
 sources:
     database:
@@ -22,214 +19,231 @@ sources:
 queries:
     database_failures:
         source: database
+        notifications: [teams_main]
         query:
             sql: SELECT * FROM test_table
-        message_single: "Test message for {}"
-        message_multiple: "Multiple test messages"
+        message_single: "Pipeline {account} in {env}: {errorMessage}"
+        message_multiple: "Multiple issues"
 """
-        config_file = tmp_path / "valid_config.yml"
-        config_file.write_text(config_content)
-        return str(config_file)
+
+
+class TestConfigLoader:
+    @pytest.fixture
+    def valid_config_file(self, tmp_path):
+        f = tmp_path / "valid_config.yml"
+        f.write_text(VALID_CONFIG)
+        return str(f)
 
     @pytest.fixture(autouse=True)
     def setup_env_vars(self, monkeypatch):
-        """Setup environment variables for all tests"""
-        monkeypatch.setenv('ETL_TEAMS_WEBHOOK_URL', 'http://test-webhook.url')
-        monkeypatch.setenv('ETL_DB_CONNECTION_STRING', 'test-connection-string')
+        monkeypatch.setenv("ETL_TEAMS_WEBHOOK_URL", "http://test-webhook.url")
+        monkeypatch.setenv("ETL_DB_CONNECTION_STRING", "test-connection-string")
 
     def test_load_valid_config(self, valid_config_file):
-        """Test loading a valid configuration file"""
         config = ConfigLoader.load_queries(valid_config_file)
-
-        assert 'notification' in config
-        assert 'sources' in config
-        assert 'queries' in config
-        assert config['notification']['type'] == 'teams'
-        assert config['notification']['webhook_url'] == 'http://test-webhook.url'
-        assert config['sources']['database']['connection_string'] == 'test-connection-string'
+        assert config["notifications"]["teams_main"]["type"] == "teams"
+        assert config["notifications"]["teams_main"]["webhook_url"] == "http://test-webhook.url"
+        assert config["sources"]["database"]["connection_string"] == "test-connection-string"
+        assert "database_failures" in config["queries"]
 
     def test_load_nonexistent_file(self):
-        """Test loading a non-existent configuration file"""
         with pytest.raises(FileNotFoundError):
             ConfigLoader.load_queries("nonexistent.yml")
 
     def test_load_invalid_yaml(self, tmp_path):
-        """Test loading an invalid YAML file"""
-        invalid_yaml = """
-        this is not valid:
-            - yaml: [content
-        """
-        config_file = tmp_path / "invalid.yml"
-        config_file.write_text(invalid_yaml)
-
+        f = tmp_path / "invalid.yml"
+        f.write_text("this is not valid:\n    - yaml: [content")
         with pytest.raises(yaml.YAMLError):
-            ConfigLoader.load_queries(str(config_file))
+            ConfigLoader.load_queries(str(f))
 
-    def test_missing_required_sections(self, tmp_path):
-        """Test configuration with missing required sections"""
-        test_cases = [
-            # Missing notification section
-            """
+    @pytest.mark.parametrize("content,match", [
+        # Missing notifications section
+        ("""
 sources:
-    database:
+    db:
         type: database
 queries:
-    test:
-        source: database
+    q:
+        source: db
+        notifications: []
         query:
             sql: SELECT 1
-        message_single: "Test"
-        message_multiple: "Test"
-            """,
-            # Missing sources section
-            """
-notification:
-    type: teams
-    webhook_url: test
+        message_single: "t"
+        message_multiple: "t"
+""", "notifications"),
+        # Missing sources section
+        ("""
+notifications:
+    t:
+        type: teams
+        webhook_url: test
 queries:
-    test:
-        source: database
+    q:
+        source: db
+        notifications: [t]
         query:
             sql: SELECT 1
-        message_single: "Test"
-        message_multiple: "Test"
-            """,
-            # Missing queries section
-            """
-notification:
-    type: teams
-    webhook_url: test
+        message_single: "t"
+        message_multiple: "t"
+""", "sources"),
+        # Missing queries section
+        ("""
+notifications:
+    t:
+        type: teams
+        webhook_url: test
 sources:
-    database:
+    db:
         type: database
-            """
-        ]
+""", "queries"),
+    ])
+    def test_missing_required_sections(self, tmp_path, content, match):
+        f = tmp_path / "config.yml"
+        f.write_text(content)
+        with pytest.raises(ValueError, match=match):
+            ConfigLoader.load_queries(str(f))
 
-        for i, content in enumerate(test_cases):
-            config_file = tmp_path / f"missing_sections_{i}.yml"
-            config_file.write_text(content)
-            
-            with pytest.raises(ValueError) as exc_info:
-                ConfigLoader.load_queries(str(config_file))
-            assert "must contain" in str(exc_info.value)
-
-    def test_missing_required_fields(self, tmp_path):
-        """Test configuration with missing required fields in sections"""
-        test_cases = [
-            # Missing notification type
-            """
-notification:
-    webhook_url: test
+    def test_missing_notification_sink_type(self, tmp_path):
+        f = tmp_path / "config.yml"
+        f.write_text("""
+notifications:
+    teams_main:
+        webhook_url: test
 sources:
-    database:
+    db:
         type: database
 queries:
-    test:
-        source: database
+    q:
+        source: db
+        notifications: [teams_main]
         query:
             sql: SELECT 1
-        message_single: "Test"
-        message_multiple: "Test"
-            """,
-            # Missing source type
-            """
-notification:
-    type: teams
-    webhook_url: test
+        message_single: "t"
+        message_multiple: "t"
+""")
+        with pytest.raises(ValueError, match="must specify a 'type'"):
+            ConfigLoader.load_queries(str(f))
+
+    def test_missing_source_type(self, tmp_path):
+        f = tmp_path / "config.yml"
+        f.write_text("""
+notifications:
+    t:
+        type: teams
+        webhook_url: test
 sources:
-    database:
+    db:
         connection_string: test
 queries:
-    test:
-        source: database
+    q:
+        source: db
+        notifications: [t]
         query:
             sql: SELECT 1
-        message_single: "Test"
-        message_multiple: "Test"
-            """
-        ]
+        message_single: "t"
+        message_multiple: "t"
+""")
+        with pytest.raises(ValueError, match="must specify a 'type'"):
+            ConfigLoader.load_queries(str(f))
 
-        for i, content in enumerate(test_cases):
-            config_file = tmp_path / f"missing_fields_{i}.yml"
-            config_file.write_text(content)
-            
-            with pytest.raises(ValueError) as exc_info:
-                ConfigLoader.load_queries(str(config_file))
-            assert "must specify" in str(exc_info.value)
-
-    def test_invalid_query_configuration(self, tmp_path):
-        """Test invalid query configurations"""
-        content = """
-notification:
-    type: teams
-    webhook_url: test
+    def test_query_references_undefined_source(self, tmp_path):
+        f = tmp_path / "config.yml"
+        f.write_text("""
+notifications:
+    t:
+        type: teams
+        webhook_url: test
 sources:
-    database:
+    db:
         type: database
 queries:
-    test:
-        source: nonexistent_source
+    q:
+        source: nonexistent
+        notifications: [t]
         query:
             sql: SELECT 1
-        message_single: "Test"
-        message_multiple: "Test"
-        """
-        
-        config_file = tmp_path / "invalid_query.yml"
-        config_file.write_text(content)
-        
-        with pytest.raises(ValueError) as exc_info:
-            ConfigLoader.load_queries(str(config_file))
-        assert "references undefined source" in str(exc_info.value)
+        message_single: "t"
+        message_multiple: "t"
+""")
+        with pytest.raises(ValueError, match="references undefined source"):
+            ConfigLoader.load_queries(str(f))
 
-    def test_environment_variable_interpolation(self, tmp_path):
-        """Test environment variable interpolation in configuration"""
-        content = """
-notification:
-    type: teams
-    webhook_url: ${TEST_WEBHOOK_URL}
+    def test_query_references_undefined_notification_sink(self, tmp_path):
+        f = tmp_path / "config.yml"
+        f.write_text("""
+notifications:
+    t:
+        type: teams
+        webhook_url: test
 sources:
-    database:
+    db:
         type: database
-        connection_string: ${TEST_CONNECTION_STRING}
 queries:
-    test:
-        source: database
+    q:
+        source: db
+        notifications: [nonexistent_sink]
         query:
             sql: SELECT 1
-        message_single: "Test"
-        message_multiple: "Test"
-        """
-        
-        config_file = tmp_path / "env_vars.yml"
-        config_file.write_text(content)
-        
-        with patch.dict(os.environ, {
-            'TEST_WEBHOOK_URL': 'http://test-webhook.url',
-            'TEST_CONNECTION_STRING': 'test-connection-string'
-        }):
-            config = ConfigLoader.load_queries(str(config_file))
-            
-        assert config['notification']['webhook_url'] == 'http://test-webhook.url'
-        assert config['sources']['database']['connection_string'] == 'test-connection-string'
+        message_single: "t"
+        message_multiple: "t"
+""")
+        with pytest.raises(ValueError, match="references undefined notification sink"):
+            ConfigLoader.load_queries(str(f))
 
-    def test_missing_environment_variable(self, valid_config_file):
-        """Test handling of missing environment variables"""
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValueError) as exc_info:
-                ConfigLoader.load_queries(valid_config_file)
-            assert "Environment variable not set" in str(exc_info.value)
+    def test_query_missing_notifications_field(self, tmp_path):
+        f = tmp_path / "config.yml"
+        f.write_text("""
+notifications:
+    t:
+        type: teams
+        webhook_url: test
+sources:
+    db:
+        type: database
+queries:
+    q:
+        source: db
+        query:
+            sql: SELECT 1
+        message_single: "t"
+        message_multiple: "t"
+""")
+        with pytest.raises(ValueError, match="must specify 'notifications'"):
+            ConfigLoader.load_queries(str(f))
 
-    def test_non_string_values(self):
-        """Test processing of non-string values"""
-        test_values = [
-            123,
-            True,
-            None,
-            ["list", "of", "values"],
-            {"key": "value"}
-        ]
-        
-        for value in test_values:
-            result = ConfigLoader._interpolate_env_vars(value)
-            assert result == value
+    def test_env_var_interpolation(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("MY_WEBHOOK", "http://my-webhook.url")
+        monkeypatch.setenv("MY_CONN", "my-conn-string")
+        f = tmp_path / "config.yml"
+        f.write_text("""
+notifications:
+    t:
+        type: teams
+        webhook_url: ${MY_WEBHOOK}
+sources:
+    db:
+        type: database
+        connection_string: ${MY_CONN}
+queries:
+    q:
+        source: db
+        notifications: [t]
+        query:
+            sql: SELECT 1
+        message_single: "t"
+        message_multiple: "t"
+""")
+        config = ConfigLoader.load_queries(str(f))
+        assert config["notifications"]["t"]["webhook_url"] == "http://my-webhook.url"
+        assert config["sources"]["db"]["connection_string"] == "my-conn-string"
+
+    def test_missing_env_var_raises(self, valid_config_file, monkeypatch):
+        monkeypatch.delenv("ETL_TEAMS_WEBHOOK_URL", raising=False)
+        with pytest.raises(ValueError, match="Environment variable not set"):
+            ConfigLoader.load_queries(valid_config_file)
+
+    def test_resolve_env_var_plain_string_unchanged(self):
+        assert ConfigLoader._resolve_env_var("plain_string") == "plain_string"
+
+    def test_resolve_env_var_partial_pattern_unchanged(self):
+        assert ConfigLoader._resolve_env_var("${incomplete") == "${incomplete"
