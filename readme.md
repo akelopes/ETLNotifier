@@ -1,14 +1,13 @@
 # ETL Notifier
 
-A Python-based notification system that monitors ETL processes and sends alerts through various channels (currently supporting Microsoft Teams).
+A Python-based notification system that monitors ETL processes and sends alerts through configurable channels (currently supporting Microsoft Teams).
 
 ## Overview
 
-The ETL Notifier is designed to:
-- Monitor ETL executions through database queries
-- Cache results to prevent duplicate notifications
-- Send formatted notifications through configurable channels
-- Support multiple data sources and notification methods
+- Monitors ETL executions through database queries
+- Caches results to prevent duplicate notifications
+- Routes alerts to one or more notification sinks per query
+- Supports multiple data sources and notification strategies
 
 ## Project Structure
 
@@ -25,32 +24,30 @@ etl_notifier/
 ├── config/
 │   └── queries.yml             # Query and notification configuration
 ├── tests/                      # Test suite
-├── scripts/                    # Utility scripts
-├── .env.example               # Example environment configuration
-└── README.md                  # This file
+└── scripts/                    # Utility scripts
 ```
 
 ## Getting Started
 
 ### Prerequisites
 
-- Python 3.8 or higher
-- ODBC Driver 17 for SQL Server
+- Python 3.8+
+- ODBC Driver 18 for SQL Server
 - Access to the target database
-- Microsoft Teams webhook URL (or other supported notification platform)
+- Microsoft Teams webhook URL (or other supported notification sink)
 
 ### Installation
 
 1. Clone the repository:
 ```bash
-git clone [repository-url]
-cd etl-notifier
+git clone https://github.com/akelopes/ETLNotifier.git
+cd ETLNotifier
 ```
 
 2. Create and activate a virtual environment:
 ```bash
 python -m venv venv
-source venv/bin/activate  # On Windows: .\venv\Scripts\activate
+source venv/bin/activate
 ```
 
 3. Install dependencies:
@@ -58,76 +55,93 @@ source venv/bin/activate  # On Windows: .\venv\Scripts\activate
 pip install -e ".[dev]"
 ```
 
-4. Set up environment configuration:
+4. Set up environment variables:
 ```bash
 ./scripts/setup_env.sh
 ```
 
-5. Edit the `.env` file with your configuration values:
+5. Edit `.env` with your values:
 ```env
-ETL_DB_CONNECTION_STRING="Driver={ODBC Driver 17 for SQL Server};Server=your-server;Database=your-db;Authentication=ActiveDirectoryInteractive;UID=your-username;"
-ETL_TEAMS_WEBHOOK_URL="your-teams-webhook-url"
+TEAMS_WEBHOOK_URL="your-teams-webhook-url"
+ETL_SLEEP_TIME=300   # polling interval in seconds (default: 300)
 ```
 
 ### Configuration
 
-The application uses two main configuration files:
+`config/queries.yml` defines notification sinks, data sources, and queries.
 
-1. `.env` - Environment variables:
-   - Database connection string
-   - Webhook URLs
-   - Cache settings
-   - Application settings
-
-2. `config/queries.yml` - Application configuration:
 ```yaml
-notification:
-  type: teams
-  webhook_url: ${ETL_TEAMS_WEBHOOK_URL}
+notifications:
+  teams_ops:
+    type: teams
+    webhook_url: ${TEAMS_WEBHOOK_URL}
+  teams_oncall:
+    type: teams
+    webhook_url: ${TEAMS_ONCALL_WEBHOOK_URL}
 
 sources:
-  database:
-    type: database
-    connection_string: ${ETL_DB_CONNECTION_STRING}
+  my_db:
+    type: azure_sql_db
+    connection_string: "Driver={ODBC Driver 18 for SQL Server};Server=..."
+    msi_client_id: "${MSI_CLIENT_ID}"
 
 queries:
-  database_failures:
-    source: database
+  failures:
+    source: my_db
+    notifications: [teams_ops, teams_oncall]   # fan-out to multiple sinks
     query:
-      sql: "YOUR_QUERY_HERE"
-    message_single: "Template for single failure"
-    message_multiple: "Template for multiple failures"
+      sql: "SELECT ..."
+    message_single: "Pipeline [{account} - {env}]({url}) failed: {errorMessage}"
+    message_multiple: "Multiple pipelines failed:"
 ```
+
+**Message templates** support these named placeholders: `{account}`, `{env}`, `{url}`, `{errorMessage}`, `{over_hour}`.
+
+**Notification behaviour** differs by query name:
+- `failures` — fires immediately on first occurrence; deduplicates by run
+- all others — fires only after an item is seen in two consecutive polling cycles (pending → confirmed), suppressing transient spikes
 
 ## Development
 
 ### Adding a New Data Source
 
-1. Create a new class in `services/data_source/` implementing the `DataSource` interface:
+1. Create a class in `src/etl_notifier/services/data_source/` implementing `DataSource`:
 ```python
 from .base import DataSource
 
 class NewDataSource(DataSource):
     def execute_query(self, query: Dict[str, Any]) -> List[Dict[str, Any]]:
-        # Implementation here
-        pass
+        ...
 ```
 
-2. Add the new source type to `ETLNotifier.SOURCE_TYPES`
+2. Register it in `ETLNotifier.SOURCE_TYPES`:
+```python
+SOURCE_TYPES = {
+    "new_type": NewDataSource,
+    ...
+}
+```
 
-### Adding a New Notification Strategy
+### Adding a New Notification Sink
 
-1. Create a new class in `services/notification/` implementing the `NotificationStrategy` interface:
+1. Create a class in `src/etl_notifier/services/notification/` implementing `NotificationStrategy`:
 ```python
 from .strategy import NotificationStrategy
 
 class NewNotificationStrategy(NotificationStrategy):
     def send_notification(self, message: str) -> None:
-        # Implementation here
-        pass
+        ...
 ```
 
-2. Add the new strategy type to `ETLNotifier.SOURCE_TYPES`
+2. Register it in `ETLNotifier.NOTIFICATION_TYPES`:
+```python
+NOTIFICATION_TYPES = {
+    "new_type": NewNotificationStrategy,
+    ...
+}
+```
+
+3. Add a sink entry in `config/queries.yml` and reference it in the relevant queries.
 
 ### Running Tests
 
@@ -135,48 +149,13 @@ class NewNotificationStrategy(NotificationStrategy):
 pytest tests/
 ```
 
-### Code Style
-
-The project uses:
-- Black for code formatting
-- isort for import sorting
-- mypy for type checking
-- flake8 for linting
-
-Run all checks:
-```bash
-black src/ tests/
-isort src/ tests/
-mypy src/
-flake8 src/ tests/
-```
-
 ## Architecture
 
-The project follows SOLID principles and uses several design patterns:
-
-1. Strategy Pattern:
-   - For notification implementations
-   - For data source implementations
-   - For cache implementations
-
-2. Dependency Injection:
-   - Components receive their dependencies through constructor injection
-   - Makes testing and extending functionality easier
-
-3. Abstract Base Classes:
-   - Define clear interfaces for implementations
-   - Ensure consistency across different implementations
-
-## Contributing
-
-1. Create a feature branch
-2. Make your changes
-3. Add tests for new functionality
-4. Ensure all tests pass
-5. Submit a pull request
+- **Strategy pattern** — `NotificationStrategy`, `DataSource`, and `CacheStrategy` are abstract bases with swappable implementations
+- **Registry pattern** — `SOURCE_TYPES` and `NOTIFICATION_TYPES` dicts on `ETLNotifier` map config `type` strings to classes, so adding a new implementation requires no changes to `run()` or `process_query_results()`
+- **Per-query sink routing** — each query declares its own `notifications` list; `ETLNotifier` fans out to all declared sinks independently
 
 ## Additional Resources
 
-- [ODBC Driver Documentation](https://docs.microsoft.com/en-us/sql/connect/odbc/microsoft-odbc-driver-for-sql-server)
-- [Teams Webhook Documentation](https://docs.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook)
+- [ODBC Driver 18 for SQL Server](https://docs.microsoft.com/en-us/sql/connect/odbc/microsoft-odbc-driver-for-sql-server)
+- [Teams Incoming Webhooks](https://docs.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook)
