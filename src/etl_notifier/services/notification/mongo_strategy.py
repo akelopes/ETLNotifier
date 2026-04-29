@@ -31,7 +31,7 @@ class MongoNotificationStrategy(NotificationStrategy):
             "id": str(uuid.uuid4()),
             "type": "ETLFailure",
             "prompt": f"Use /etl-triage to analyze ADF failure {record.run_id} for {record.account_name} ({record.environment})",
-            "status": "completed",
+            "status": "new",
             "createdAt": now,
             "source": "etlnotifier",
             "startedAt": now,
