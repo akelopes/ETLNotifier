@@ -12,7 +12,7 @@ class MongoNotificationStrategy(NotificationStrategy):
     def __init__(self, connection_string: str, database: str, collection: str, environments: Optional[List[str]] = None):
         self._client = MongoClient(connection_string)
         self._col = self._client[database][collection]
-        self._environments = environments
+        self._environments = [e.lower() for e in environments] if environments is not None else None
 
     def send_notification(
         self,
@@ -20,7 +20,7 @@ class MongoNotificationStrategy(NotificationStrategy):
         template_single: str,
         template_multiple: str,
     ) -> None:
-        filtered = [r for r in records if not self._environments or r.environment in self._environments]
+        filtered = [r for r in records if not self._environments or r.environment.lower() in self._environments]
         if not filtered:
             return
         now = datetime.now(timezone.utc)
